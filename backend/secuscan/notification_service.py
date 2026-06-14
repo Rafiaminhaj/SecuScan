@@ -9,6 +9,7 @@ email is a logged placeholder until SMTP is added.
 from __future__ import annotations
 
 import json
+import html
 import logging
 import socket
 import uuid
@@ -249,6 +250,13 @@ async def send_email(
         f"View results in the SecuScan Dashboard."
     )
 
+    title_esc = html.escape(str(finding.get('title') or ""))
+    category_esc = html.escape(str(finding.get('category') or ""))
+    severity_esc = html.escape(str(finding.get('severity') or ""))
+    target_esc = html.escape(str(finding.get('target') or ""))
+    description_esc = html.escape(str(finding.get('description') or "")).replace('\n', '<br>')
+    remediation_esc = html.escape(str(finding.get('remediation') or "")).replace('\n', '<br>')
+
     body_html = f"""<!DOCTYPE html>
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -257,26 +265,26 @@ async def send_email(
   <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
     <tr style="background-color: #f8fafc;">
       <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; width: 140px;">Title</td>
-      <td style="padding: 10px; border: 1px solid #e2e8f0;">{finding.get('title')}</td>
+      <td style="padding: 10px; border: 1px solid #e2e8f0;">{title_esc}</td>
     </tr>
     <tr>
       <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">Category</td>
-      <td style="padding: 10px; border: 1px solid #e2e8f0;">{finding.get('category')}</td>
+      <td style="padding: 10px; border: 1px solid #e2e8f0;">{category_esc}</td>
     </tr>
     <tr style="background-color: #f8fafc;">
       <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">Severity</td>
-      <td style="padding: 10px; border: 1px solid #e2e8f0; text-transform: uppercase; font-weight: bold; color: #991b1b;">{finding.get('severity')}</td>
+      <td style="padding: 10px; border: 1px solid #e2e8f0; text-transform: uppercase; font-weight: bold; color: #991b1b;">{severity_esc}</td>
     </tr>
     <tr>
       <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold;">Target</td>
-      <td style="padding: 10px; border: 1px solid #e2e8f0;">{finding.get('target')}</td>
+      <td style="padding: 10px; border: 1px solid #e2e8f0;">{target_esc}</td>
     </tr>
   </table>
   <h3>Description</h3>
-  <p style="color: #475569; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">{finding.get('description')}</p>
+  <p style="color: #475569; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">{description_esc}</p>
   <h3>Remediation Guidance</h3>
   <p style="color: #166534; background-color: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; border-left: 4px solid #22c55e;">
-    {finding.get('remediation')}
+    {remediation_esc}
   </p>
   <p style="font-size: 11px; color: #64748b; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
     This is an automated notification from your SecuScan installation.
