@@ -327,7 +327,7 @@ class ReportGenerator:
         width, height = 480, 160
         img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(img)
-        
+
         colors_map = {
             "CRITICAL": (153, 27, 27, 255),
             "HIGH": (220, 38, 38, 255),
@@ -335,19 +335,19 @@ class ReportGenerator:
             "LOW": (37, 99, 235, 255),
             "INFO": (71, 85, 105, 255)
         }
-        
+
         severities = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
         max_val = max(severity_counts.values()) if any(severity_counts.values()) else 1
-        
+
         # Draw background container
         draw.rounded_rectangle([0, 0, width - 1, height - 1], radius=8, fill=(248, 250, 252, 255), outline=(226, 232, 240, 255), width=1)
-        
+
         y_offset = 12
         bar_height = 16
         spacing = 10
         x_start = 110
         max_bar_width = 280
-        
+
         from PIL import ImageFont
         font = None
         for font_name in ("arial.ttf", "Helvetica.ttf", "segoeui.ttf", "sans-serif.ttf"):
@@ -361,28 +361,28 @@ class ReportGenerator:
                 font = ImageFont.load_default()
             except Exception:
                 font = None
-            
+
         for i, sev in enumerate(severities):
             count = severity_counts.get(sev, 0)
             bar_len = int((count / max_val) * max_bar_width) if count > 0 else 0
             color = colors_map[sev]
-            
+
             # Draw background progress track
             draw.rounded_rectangle([x_start, y_offset, x_start + max_bar_width, y_offset + bar_height], radius=4, fill=(226, 232, 240, 255))
-            
+
             # Draw actual severity bar
             if count > 0:
                 draw.rounded_rectangle([x_start, y_offset, x_start + bar_len, y_offset + bar_height], radius=4, fill=color)
-            
+
             # Draw labels
             if font:
                 # Severity label
                 draw.text((20, y_offset + 2), sev.title(), fill=(71, 85, 105, 255), font=font)
                 # Count label
                 draw.text((x_start + bar_len + 10, y_offset + 2), str(count), fill=(15, 23, 42, 255), font=font)
-                
+
             y_offset += bar_height + spacing
-            
+
         output = io.BytesIO()
         img.save(output, format="PNG")
         encoded = base64.b64encode(output.getvalue()).decode("ascii")
@@ -397,7 +397,7 @@ class ReportGenerator:
             severity = finding.get("severity", "INFO").upper()
             category = finding.get("category", "General").lower()
             description = finding.get("description", "")
-            
+
             # Priority mapping
             if severity in ("CRITICAL", "HIGH"):
                 priority = "Immediate"
@@ -408,7 +408,7 @@ class ReportGenerator:
             else:
                 priority = "Backlog"
                 priority_val = 3
-                
+
             # Difficulty mapping heuristics
             text_to_search = (title + " " + category + " " + description).lower()
             if any(kw in text_to_search for kw in ("injection", "rce", "bypass", "exec", "auth", "privilege", "deserialization", "crlf", "cryptographic")):
@@ -420,7 +420,7 @@ class ReportGenerator:
             else:
                 difficulty = "Standard Fix"
                 difficulty_val = 2
-                
+
             roadmap.append({
                 "title": title,
                 "severity": severity,
@@ -431,7 +431,7 @@ class ReportGenerator:
                 "remediation": finding.get("remediation", "No remediation actions provided."),
                 "target": finding.get("target") or "General target"
             })
-            
+
         # Sort roadmap: priority_val asc (Immediate -> Scheduled -> Backlog), difficulty_val asc (Quick -> Standard -> Complex)
         roadmap.sort(key=lambda x: (x["priority_val"], x["difficulty_val"]))
         return roadmap
@@ -762,7 +762,7 @@ class ReportGenerator:
         rows_icon = cls._icon_data_uri("rows", "2563eb")
         clock_icon = cls._icon_data_uri("clock", "475569")
         target_html = cls._escape_html_with_breaks(payload["target"])
-        
+
         # New base64 Severity Chart
         severity_chart_data = cls._generate_severity_chart(severity_counts)
 
@@ -810,7 +810,7 @@ class ReportGenerator:
                 </div>
             </article>
             """
-            
+
         # Build Remediation Roadmap HTML Markup
         roadmap = cls._build_remediation_roadmap(findings)
         roadmap_html_markup = ""
@@ -946,7 +946,7 @@ class ReportGenerator:
     }}
     .meta-grid {{ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }}
     .stat-grid {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 28px; }}
-    
+
     .meta-card, .stat-card, .finding-card {{
       background: var(--panel);
       border: 1px solid var(--line);
@@ -1032,12 +1032,12 @@ class ReportGenerator:
     .finding-card.severity-medium {{ border-left-color: var(--medium); }}
     .finding-card.severity-low {{ border-left-color: var(--low); }}
     .finding-card.severity-info {{ border-left-color: var(--info); }}
-    
+
     .finding-card:hover {{
       transform: translateY(-2px);
       box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
     }}
-    
+
     .finding-top {{
       display: flex;
       gap: 16px;
@@ -1074,7 +1074,7 @@ class ReportGenerator:
     .severity-medium {{ background: var(--medium); }}
     .severity-low {{ background: var(--low); }}
     .severity-info {{ background: var(--info); }}
-    
+
     .finding-body {{
       padding: 24px;
       display: grid;
@@ -1112,7 +1112,7 @@ class ReportGenerator:
     }}
     .remediation p, .remediation h4 {{ color: var(--success-ink); }}
     .empty-state {{ text-align: center; color: var(--subtle); padding: 40px 20px; }}
-    
+
     /* Toolbar & Segmented Switcher */
     .toolbar {{
       margin-top: 28px;
@@ -1149,7 +1149,7 @@ class ReportGenerator:
       color: var(--ink);
       box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
     }}
-    
+
     /* View Switcher Display Rules */
     .shell.view-executive .developer-only {{ display: none !important; }}
     .shell.view-developer .executive-only {{ display: none !important; }}
@@ -1290,11 +1290,11 @@ class ReportGenerator:
     .badge.priority-immediate {{ background: rgba(239, 68, 68, 0.1); color: var(--high); }}
     .badge.priority-scheduled {{ background: rgba(245, 158, 11, 0.1); color: var(--medium); }}
     .badge.priority-backlog {{ background: rgba(100, 116, 139, 0.1); color: var(--subtle); }}
-    
+
     .badge.difficulty-quick-fix {{ background: rgba(34, 197, 94, 0.1); color: #16a34a; }}
     .badge.difficulty-standard-fix {{ background: rgba(37, 99, 235, 0.1); color: var(--low); }}
     .badge.difficulty-complex-fix {{ background: rgba(217, 119, 6, 0.1); color: var(--medium); }}
-    
+
     .roadmap-target {{
       font-size: 12.5px;
       color: var(--subtle);
@@ -1355,7 +1355,7 @@ class ReportGenerator:
         break-inside: avoid;
       }}
       .section, .meta-card, .stat-card, .finding-card {{ box-shadow: none; }}
-      
+
       /* Hide controls on PDF print */
       .toolbar, .print-btn, .view-switcher {{
         display: none !important;
@@ -1449,7 +1449,7 @@ class ReportGenerator:
           tab.classList.remove('active');
         }}
       }});
-      
+
       const shell = document.querySelector('.shell');
       if (viewName === 'executive') {{
         shell.classList.remove('view-developer');
