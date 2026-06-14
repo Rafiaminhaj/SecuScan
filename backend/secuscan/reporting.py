@@ -349,18 +349,30 @@ class ReportGenerator:
         max_bar_width = 280
         
         from PIL import ImageFont
-        try:
-            font = ImageFont.load_default()
-        except Exception:
-            font = None
+        font = None
+        for font_name in ("arial.ttf", "Helvetica.ttf", "segoeui.ttf", "sans-serif.ttf"):
+            try:
+                font = ImageFont.truetype(font_name, 12)
+                break
+            except Exception:
+                continue
+        if font is None:
+            try:
+                font = ImageFont.load_default()
+            except Exception:
+                font = None
             
         for i, sev in enumerate(severities):
             count = severity_counts.get(sev, 0)
             bar_len = int((count / max_val) * max_bar_width) if count > 0 else 0
             color = colors_map[sev]
             
-            # Draw bar
-            draw.rectangle([x_start, y_offset, x_start + bar_len, y_offset + bar_height], fill=color)
+            # Draw background progress track
+            draw.rounded_rectangle([x_start, y_offset, x_start + max_bar_width, y_offset + bar_height], radius=4, fill=(226, 232, 240, 255))
+            
+            # Draw actual severity bar
+            if count > 0:
+                draw.rounded_rectangle([x_start, y_offset, x_start + bar_len, y_offset + bar_height], radius=4, fill=color)
             
             # Draw labels
             if font:
@@ -763,7 +775,7 @@ class ReportGenerator:
         )
         finding_markup = "".join(
             f"""
-            <article class="finding-card">
+            <article class="finding-card severity-{finding['severity'].lower()}">
                 <div class="finding-top">
                     <span class="severity severity-{finding['severity'].lower()}"><img class="mini-icon" src="{critical_icon}" alt=""> {cls._escape_html(finding['severity'])}</span>
                     <div class="finding-heading">
@@ -829,6 +841,9 @@ class ReportGenerator:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SecuScan Report - {cls._escape_html(payload['target'])}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {{
       --ink: #0f172a;
@@ -849,31 +864,48 @@ class ReportGenerator:
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--ink);
       padding: 36px 18px 80px;
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }}
     .shell {{ max-width: 1100px; margin: 0 auto; }}
     .hero {{
       background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #0f766e 100%);
       color: white;
       border-radius: 24px;
-      padding: 32px;
-      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+      padding: 40px 32px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+      position: relative;
+      overflow: hidden;
+    }}
+    .hero::after {{
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      filter: blur(40px);
+      pointer-events: none;
     }}
     .hero-title {{
       align-items: flex-start;
       display: flex;
-      gap: 16px;
+      gap: 20px;
     }}
     .hero-icon {{
-      border: 1px solid rgba(255, 255, 255, 0.28);
-      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 18px;
       height: 56px;
-      padding: 8px;
+      padding: 10px;
       width: 56px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
     }}
     .hero-icon img, .card-icon img, .section-icon, .mini-icon {{
       display: block;
@@ -897,28 +929,35 @@ class ReportGenerator:
       width: 14px;
     }}
     .eyebrow {{
-      letter-spacing: 0.16em;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 700;
       opacity: 0.85;
       margin-bottom: 10px;
     }}
-    h1 {{ margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.05; }}
-    .hero p {{ max-width: 760px; color: rgba(255, 255, 255, 0.86); }}
+    h1 {{ margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; font-weight: 800; }}
+    .hero p {{ max-width: 760px; color: rgba(255, 255, 255, 0.85); margin-top: 14px; font-size: 1.05rem; }}
     .meta-grid, .stat-grid {{
       display: grid;
-      gap: 16px;
+      gap: 20px;
       margin-top: 24px;
     }}
-    .meta-grid {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }}
-    .stat-grid {{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 28px; }}
+    .meta-grid {{ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }}
+    .stat-grid {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 28px; }}
+    
     .meta-card, .stat-card, .finding-card {{
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 20px;
-      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }}
-    .meta-card, .stat-card {{ padding: 18px 20px; }}
+    .meta-card:hover, .stat-card:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }}
+    .meta-card, .stat-card {{ padding: 20px 24px; }}
     .meta-card label, .stat-card label {{
       display: block;
       font-size: 11px;
@@ -931,6 +970,7 @@ class ReportGenerator:
     .meta-card strong, .stat-card strong {{
       font-size: 1.35rem;
       color: var(--ink);
+      font-weight: 700;
     }}
     .stat-card {{
       position: relative;
@@ -951,43 +991,64 @@ class ReportGenerator:
     }}
     .section {{
       margin-top: 28px;
-      background: rgba(255, 255, 255, 0.58);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
       border-radius: 24px;
-      padding: 26px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.03);
     }}
     .section h2 {{
       margin: 0 0 10px;
       font-size: 1.6rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
     }}
     .section-copy {{
-      margin: 0 0 18px;
+      margin: 0 0 24px;
       color: var(--muted);
+      font-size: 1rem;
     }}
     .summary-list {{
       margin: 0;
       padding-left: 20px;
       color: var(--muted);
     }}
+    .summary-list li {{
+      margin-bottom: 10px;
+    }}
     .findings {{
       display: grid;
-      gap: 18px;
+      gap: 20px;
     }}
     .finding-card {{
       overflow: hidden;
+      border-left: 6px solid var(--info);
     }}
+    .finding-card.severity-critical {{ border-left-color: var(--critical); }}
+    .finding-card.severity-high {{ border-left-color: var(--high); }}
+    .finding-card.severity-medium {{ border-left-color: var(--medium); }}
+    .finding-card.severity-low {{ border-left-color: var(--low); }}
+    .finding-card.severity-info {{ border-left-color: var(--info); }}
+    
+    .finding-card:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }}
+    
     .finding-top {{
       display: flex;
       gap: 16px;
       align-items: flex-start;
-      padding: 20px 22px 14px;
+      padding: 22px 24px 16px;
       border-bottom: 1px solid var(--line);
       background: var(--panel-alt);
     }}
     .finding-heading h3 {{
       margin: 0 0 4px;
-      font-size: 1.2rem;
+      font-size: 1.25rem;
+      font-weight: 700;
     }}
     .finding-heading p {{
       margin: 0;
@@ -999,10 +1060,10 @@ class ReportGenerator:
       align-items: center;
       justify-content: center;
       min-width: 90px;
-      padding: 7px 12px;
+      padding: 7px 14px;
       border-radius: 999px;
       color: white;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -1012,14 +1073,19 @@ class ReportGenerator:
     .severity-medium {{ background: var(--medium); }}
     .severity-low {{ background: var(--low); }}
     .severity-info {{ background: var(--info); }}
+    
     .finding-body {{
-      padding: 22px;
+      padding: 24px;
       display: grid;
-      gap: 16px;
+      gap: 20px;
     }}
     .finding-body h4 {{
-      margin: 0 0 6px;
+      margin: 0 0 8px;
       font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--subtle);
+      font-weight: 700;
     }}
     .finding-body p, .finding-body pre {{
       margin: 0;
@@ -1029,19 +1095,215 @@ class ReportGenerator:
       white-space: pre-wrap;
       word-break: break-word;
       background: #0f172a;
-      color: #dbeafe;
-      padding: 16px;
+      color: #38bdf8;
+      padding: 18px;
       border-radius: 14px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }}
     .remediation {{
       background: var(--success-bg);
       border-left: 4px solid #22c55e;
-      padding: 16px;
+      padding: 18px;
       border-radius: 14px;
+      border: 1px solid rgba(34, 197, 94, 0.12);
     }}
     .remediation p, .remediation h4 {{ color: var(--success-ink); }}
-    .empty-state {{ text-align: center; }}
+    .empty-state {{ text-align: center; color: var(--subtle); padding: 40px 20px; }}
+    
+    /* Toolbar & Segmented Switcher */
+    .toolbar {{
+      margin-top: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }}
+    .view-switcher {{
+      display: flex;
+      background: rgba(15, 23, 42, 0.06);
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }}
+    .tab-btn {{
+      background: transparent;
+      border: none;
+      color: var(--subtle);
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }}
+    .tab-btn:hover {{
+      color: var(--ink);
+    }}
+    .tab-btn.active {{
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    }}
+    
+    /* View Switcher Display Rules */
+    .shell.view-executive .developer-only {{ display: none !important; }}
+    .shell.view-developer .executive-only {{ display: none !important; }}
+
+    /* AI Executive Summary Card */
+    .ai-summary-card {{
+      margin: 0 0 24px;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
+      border: 1px solid rgba(37, 99, 235, 0.15);
+      border-left: 5px solid var(--low);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.04);
+    }}
+    .ai-summary-card h4 {{
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #1d4ed8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }}
+    .ai-summary-card p {{
+      margin: 0;
+      color: #1e293b;
+      line-height: 1.65;
+      font-size: 0.95rem;
+    }}
+
+    /* Roadmap Checklist Styling */
+    .roadmap-checklist {{
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }}
+    .roadmap-item {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 24px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }}
+    .roadmap-item:hover {{
+      border-color: #cbd5e1;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    }}
+    .checkbox-container {{
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      cursor: pointer;
+      user-select: none;
+      width: 100%;
+    }}
+    .checkbox-container input {{
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      height: 0;
+      width: 0;
+    }}
+    .checkmark {{
+      flex: 0 0 22px;
+      height: 22px;
+      width: 22px;
+      background-color: #f1f5f9;
+      border: 2px solid #cbd5e1;
+      border-radius: 7px;
+      position: relative;
+      margin-top: 2px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }}
+    .checkbox-container:hover input ~ .checkmark {{
+      background-color: #e2e8f0;
+      border-color: #94a3b8;
+    }}
+    .checkbox-container input:checked ~ .checkmark {{
+      background-color: #22c55e;
+      border-color: #22c55e;
+      transform: scale(1.05);
+    }}
+    .checkmark:after {{
+      content: "";
+      position: absolute;
+      display: none;
+      left: 7px;
+      top: 3px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2.5px 2.5px 0;
+      transform: rotate(45deg);
+    }}
+    .checkbox-container input:checked ~ .checkmark:after {{
+      display: block;
+    }}
+    .checkbox-container input:checked ~ .roadmap-details {{
+      opacity: 0.6;
+    }}
+    .roadmap-details {{
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-grow: 1;
+      transition: all 0.25s ease;
+    }}
+    .checkbox-container input:checked ~ .roadmap-details .roadmap-title {{
+      text-decoration: line-through;
+      color: var(--subtle);
+    }}
+    .roadmap-title {{
+      font-size: 15.5px;
+      font-weight: 600;
+      color: var(--ink);
+      transition: color 0.25s ease;
+    }}
+    .roadmap-meta {{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
+    .badge {{
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .badge.priority-immediate {{ background: rgba(239, 68, 68, 0.1); color: var(--high); }}
+    .badge.priority-scheduled {{ background: rgba(245, 158, 11, 0.1); color: var(--medium); }}
+    .badge.priority-backlog {{ background: rgba(100, 116, 139, 0.1); color: var(--subtle); }}
+    
+    .badge.difficulty-quick-fix {{ background: rgba(34, 197, 94, 0.1); color: #16a34a; }}
+    .badge.difficulty-standard-fix {{ background: rgba(37, 99, 235, 0.1); color: var(--low); }}
+    .badge.difficulty-complex-fix {{ background: rgba(217, 119, 6, 0.1); color: var(--medium); }}
+    
+    .roadmap-target {{
+      font-size: 12.5px;
+      color: var(--subtle);
+    }}
+    .roadmap-action {{
+      font-size: 13px;
+      color: var(--muted);
+      margin: 4px 0 0;
+    }}
+
     @page {{
       size: A4;
       margin: 14mm 12mm 16mm;
@@ -1069,125 +1331,6 @@ class ReportGenerator:
         break-inside: avoid;
       }}
       .section, .meta-card, .stat-card, .finding-card {{ box-shadow: none; }}
-    }}
-
-    /* View Switcher Styling */
-    .shell.view-executive .developer-only {{ display: none !important; }}
-    .shell.view-developer .executive-only {{ display: none !important; }}
-
-    /* Roadmap Checklist Styling */
-    .roadmap-checklist {{
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }}
-    .roadmap-item {{
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 16px 20px;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
-    }}
-    .roadmap-item:hover {{
-      border-color: #cbd5e1;
-    }}
-    .checkbox-container {{
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      cursor: pointer;
-      user-select: none;
-      width: 100%;
-    }}
-    .checkbox-container input {{
-      position: absolute;
-      opacity: 0;
-      cursor: pointer;
-      height: 0;
-      width: 0;
-    }}
-    .checkmark {{
-      flex: 0 0 20px;
-      height: 20px;
-      width: 20px;
-      background-color: #f1f5f9;
-      border: 2px solid #cbd5e1;
-      border-radius: 6px;
-      position: relative;
-      margin-top: 3px;
-    }}
-    .checkbox-container:hover input ~ .checkmark {{
-      background-color: #e2e8f0;
-    }}
-    .checkbox-container input:checked ~ .checkmark {{
-      background-color: #22c55e;
-      border-color: #22c55e;
-    }}
-    .checkmark:after {{
-      content: "";
-      position: absolute;
-      display: none;
-    }}
-    .checkbox-container input:checked ~ .checkmark:after {{
-      display: block;
-    }}
-    .checkbox-container .checkmark:after {{
-      left: 6px;
-      top: 2px;
-      width: 5px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2.5px 2.5px 0;
-      transform: rotate(45deg);
-    }}
-    .checkbox-container input:checked ~ .roadmap-details .roadmap-title {{
-      text-decoration: line-through;
-      color: var(--subtle);
-    }}
-    .roadmap-details {{
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex-grow: 1;
-    }}
-    .roadmap-title {{
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--ink);
-    }}
-    .roadmap-meta {{
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }}
-    .badge {{
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 99px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }}
-    .badge.priority-immediate {{ background: rgba(239, 68, 68, 0.1); color: var(--high); }}
-    .badge.priority-scheduled {{ background: rgba(245, 158, 11, 0.1); color: var(--medium); }}
-    .badge.priority-backlog {{ background: rgba(100, 116, 139, 0.1); color: var(--subtle); }}
-    
-    .badge.difficulty-quick-fix {{ background: rgba(34, 197, 94, 0.1); color: #16a34a; }}
-    .badge.difficulty-standard-fix {{ background: rgba(37, 99, 235, 0.1); color: var(--low); }}
-    .badge.difficulty-complex-fix {{ background: rgba(217, 119, 6, 0.1); color: var(--medium); }}
-    
-    .roadmap-target {{
-      font-size: 12px;
-      color: var(--subtle);
-    }}
-    .roadmap-action {{
-      font-size: 12.5px;
-      color: var(--muted);
-      margin: 4px 0 0;
     }}
   </style>
 </head>
@@ -1219,10 +1362,10 @@ class ReportGenerator:
     </div>
 
     <!-- View Switcher -->
-    <div class="toolbar" style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <div class="view-switcher" style="display: flex; background: rgba(15, 23, 42, 0.05); padding: 4px; border-radius: 12px; border: 1px solid var(--line);">
-        <button class="tab-btn active" onclick="switchView('executive')" style="background: var(--panel); border: none; color: var(--ink); padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.04); transition: all 0.2s;">Executive Summary Sheet</button>
-        <button class="tab-btn" onclick="switchView('developer')" style="background: transparent; border: none; color: var(--subtle); padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s;">Developer-Focused Logs</button>
+    <div class="toolbar">
+      <div class="view-switcher">
+        <button class="tab-btn active" onclick="switchView('executive')">Executive Summary Sheet</button>
+        <button class="tab-btn" onclick="switchView('developer')">Developer-Focused Logs</button>
       </div>
     </div>
 
@@ -1232,7 +1375,7 @@ class ReportGenerator:
       <p class="section-copy">Key takeaways and severity distribution generated from the parsed assessment data.</p>
       <div class="executive-container" style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 300px;">
-          {f'''<div style="margin:0 0 18px;padding:16px 20px;background:#eff6ff;border-left:4px solid #2563eb;border-radius:14px;"><p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1d4ed8;">&#129302; AI Executive Summary</p><p style="margin:0;color:#1e293b;line-height:1.65;">{cls._escape_html(ai_summary)}</p></div>''' if ai_summary else ""}
+          {f'''<div class="ai-summary-card"><h4>🤖 AI Executive Summary</h4><p>{cls._escape_html(ai_summary)}</p></div>''' if ai_summary else ""}
           <ul class="summary-list">{summary_markup}</ul>
         </div>
         <div class="chart-container" style="flex: 0 0 400px; max-width: 100%;">
@@ -1269,14 +1412,8 @@ class ReportGenerator:
       tabs.forEach(tab => {{
         if (tab.innerText.toLowerCase().includes(viewName)) {{
           tab.classList.add('active');
-          tab.style.background = 'var(--panel)';
-          tab.style.color = 'var(--ink)';
-          tab.style.boxShadow = '0 4px 10px rgba(0,0,0,0.04)';
         }} else {{
           tab.classList.remove('active');
-          tab.style.background = 'transparent';
-          tab.style.color = 'var(--subtle)';
-          tab.style.boxShadow = 'none';
         }}
       }});
       
