@@ -1154,7 +1154,7 @@ class ReportGenerator:
     .shell.view-executive .developer-only {{ display: none !important; }}
     .shell.view-developer .executive-only {{ display: none !important; }}
 
-    /* AI Executive Summary Card */
+    /* AI-Summary Card Component */
     .ai-summary-card {{
       margin: 0 0 24px;
       padding: 20px 24px;
