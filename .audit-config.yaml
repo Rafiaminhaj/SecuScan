@@ -16,12 +16,8 @@ policy:
   warn_before_expiry_days: 14
 
 # Documented exceptions with business justification
-exceptions:
-  GHSA-gv7w-rqvm-qjhr:
-    package: "esbuild"
-    expires_at: "2027-06-14"
-    justification: "Upgrading esbuild to fix this vulnerability causes production build compilation failure due to destructuring transpilation errors in React Router dependency."
-
+# Format: CVE-XXXX-XXXXX or GHSA-xxxx-xxxx-xxxx
+exceptions: {}
 
 # Packages to exclude from audits (use sparingly!)
 excluded_packages: []
