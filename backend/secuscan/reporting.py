@@ -657,7 +657,7 @@ class ReportGenerator:
         )
         finding_markup = "".join(
             f"""
-            <article class="finding-card">
+            <article class="finding-card severity-{finding['severity'].lower()}">
                 <div class="finding-top">
                     <span class="severity severity-{finding['severity'].lower()}"><img class="mini-icon" src="{critical_icon}" alt=""> {cls._escape_html(finding['severity'])}</span>
                     <div class="finding-heading">
@@ -846,6 +846,17 @@ class ReportGenerator:
     }}
     .finding-card {{
       overflow: hidden;
+      border-left: 6px solid var(--info);
+    }}
+    .finding-card.severity-critical {{ border-left-color: var(--critical); }}
+    .finding-card.severity-high {{ border-left-color: var(--high); }}
+    .finding-card.severity-medium {{ border-left-color: var(--medium); }}
+    .finding-card.severity-low {{ border-left-color: var(--low); }}
+    .finding-card.severity-info {{ border-left-color: var(--info); }}
+
+    .finding-card:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
     }}
     .finding-top {{
       display: flex;
