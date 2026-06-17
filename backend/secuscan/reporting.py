@@ -97,6 +97,54 @@ class ReportGenerator:
         return f"data:image/png;base64,{encoded}"
 
     @classmethod
+    def _build_remediation_roadmap(cls, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Categorize and prioritize findings by priority and fix difficulty."""
+        roadmap = []
+        for finding in findings:
+            title = finding.get("title", "Untitled finding")
+            severity = finding.get("severity", "INFO").upper()
+            category = finding.get("category", "General").lower()
+            description = finding.get("description", "")
+
+            # Priority mapping
+            if severity in ("CRITICAL", "HIGH"):
+                priority = "Immediate"
+                priority_val = 1
+            elif severity == "MEDIUM":
+                priority = "Scheduled"
+                priority_val = 2
+            else:
+                priority = "Backlog"
+                priority_val = 3
+
+            # Difficulty mapping heuristics
+            text_to_search = (title + " " + category + " " + description).lower()
+            if any(kw in text_to_search for kw in ("injection", "rce", "bypass", "exec", "auth", "privilege", "deserialization", "crlf", "cryptographic")):
+                difficulty = "Complex Fix"
+                difficulty_val = 3
+            elif any(kw in text_to_search for kw in ("version", "outdated", "header", "deprecate", "secret", "token", "password", "key", "config", "ciphers")):
+                difficulty = "Quick Fix"
+                difficulty_val = 1
+            else:
+                difficulty = "Standard Fix"
+                difficulty_val = 2
+
+            roadmap.append({
+                "title": title,
+                "severity": severity,
+                "priority": priority,
+                "priority_val": priority_val,
+                "difficulty": difficulty,
+                "difficulty_val": difficulty_val,
+                "remediation": finding.get("remediation", "No remediation actions provided."),
+                "target": finding.get("target") or "General target"
+            })
+
+        # Sort roadmap: priority_val asc (Immediate -> Scheduled -> Backlog), difficulty_val asc (Quick -> Standard -> Complex)
+        roadmap.sort(key=lambda x: (x["priority_val"], x["difficulty_val"]))
+        return roadmap
+
+    @classmethod
     def _get_ai_summary(cls, findings):
         """Return an AI executive summary, or '' when the feature is disabled."""
         from .config import settings as _settings
@@ -761,6 +809,26 @@ class ReportGenerator:
             </article>
             """
 
+        # Build Remediation Roadmap HTML Markup
+        roadmap = cls._build_remediation_roadmap(findings)
+        roadmap_html_markup = ""
+        for i, item in enumerate(roadmap):
+            roadmap_html_markup += f"""
+            <li class="roadmap-item">
+                <div class="roadmap-details">
+                    <span class="roadmap-title">{cls._escape_html(item['title'])}</span>
+                    <div class="roadmap-meta">
+                        <span class="badge priority-{item['priority'].lower()}">{item['priority']} Priority</span>
+                        <span class="badge difficulty-{item['difficulty'].lower().replace(' ', '-')}">{item['difficulty']}</span>
+                        <span class="roadmap-target">Target: {cls._escape_html(item['target'])}</span>
+                    </div>
+                    <p class="roadmap-action"><b>Remediation action:</b> {cls._escape_html(item['remediation'])}</p>
+                </div>
+            </li>
+            """
+        if not roadmap_html_markup:
+            roadmap_html_markup = "<li class='empty-state'>No remediation actions needed.</li>"
+
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -991,6 +1059,72 @@ class ReportGenerator:
     }}
     .remediation p, .remediation h4 {{ color: var(--success-ink); }}
     .empty-state {{ text-align: center; }}
+
+    /* Roadmap Checklist Styling */
+    .roadmap-checklist {{
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }}
+    .roadmap-item {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 24px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }}
+    .roadmap-item:hover {{
+      border-color: #cbd5e1;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    }}
+    .roadmap-details {{
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-grow: 1;
+    }}
+    .roadmap-title {{
+      font-size: 15.5px;
+      font-weight: 600;
+      color: var(--ink);
+      transition: color 0.25s ease;
+    }}
+    .roadmap-meta {{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
+    .badge {{
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .badge.priority-immediate {{ background: rgba(239, 68, 68, 0.1); color: var(--high); }}
+    .badge.priority-scheduled {{ background: rgba(245, 158, 11, 0.1); color: var(--medium); }}
+    .badge.priority-backlog {{ background: rgba(100, 116, 139, 0.1); color: var(--subtle); }}
+
+    .badge.difficulty-quick-fix {{ background: rgba(34, 197, 94, 0.1); color: #16a34a; }}
+    .badge.difficulty-standard-fix {{ background: rgba(37, 99, 235, 0.1); color: var(--low); }}
+    .badge.difficulty-complex-fix {{ background: rgba(217, 119, 6, 0.1); color: var(--medium); }}
+
+    .roadmap-target {{
+      font-size: 12.5px;
+      color: var(--subtle);
+    }}
+    .roadmap-action {{
+      font-size: 13px;
+      color: var(--muted);
+      margin: 4px 0 0;
+    }}
+
     @page {{
       size: A4;
       margin: 14mm 12mm 16mm;
@@ -1053,13 +1187,21 @@ class ReportGenerator:
       <p class="section-copy">Key takeaways and severity distribution generated from the parsed assessment data.</p>
       <div class="executive-container" style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 300px;">
-          {f'''<div style="margin:0 0 18px;padding:16px 20px;background:#eff6ff;border-left:4px solid #2563eb;border-radius:14px;"><p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1d4ed8;">&#129302; AI Executive Summary</p><p style="margin:0;color:#1e293b;line-height:1.65;">{cls._escape_html(ai_summary)}</p></div>''' if ai_summary else ""}
+          {f'''<div class="ai-summary-card"><h4>🤖 AI Executive Summary</h4><p>{cls._escape_html(ai_summary)}</p></div>''' if ai_summary else ""}
           <ul class="summary-list">{summary_markup}</ul>
         </div>
         <div class="chart-container" style="flex: 0 0 400px; max-width: 100%;">
           <img src="{severity_chart_data}" alt="Severity Distribution Chart" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
         </div>
       </div>
+    </section>
+
+    <section class="section">
+      <h2><img class="section-icon" src="{shield_icon}" alt="">Remediation Roadmap</h2>
+      <p class="section-copy">Actionable steps grouped by implementation priority and complexity. Mark off completed items to track your progress.</p>
+      <ul class="roadmap-checklist">
+        {roadmap_html_markup}
+      </ul>
     </section>
 
     <section class="section">
