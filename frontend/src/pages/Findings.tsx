@@ -797,9 +797,9 @@ export default function Findings() {
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
-                <div className="space-y-2">
+            <div className="flex flex-col gap-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>Target</label>
                   <select
                     value={filterTarget}
@@ -813,7 +813,7 @@ export default function Findings() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>Scanner / Tool</label>
                   <select
                     value={filterScanner}
@@ -827,7 +827,7 @@ export default function Findings() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>Asset</label>
                   <select
                     value={filterAsset}
@@ -841,7 +841,7 @@ export default function Findings() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>Finding Kind</label>
                   <select
                     value={filterKind}
@@ -855,7 +855,7 @@ export default function Findings() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>Analyst State</label>
                   <select
                     value={filterAnalystStatus}
@@ -869,7 +869,7 @@ export default function Findings() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>Sort By</label>
                   <select
                     value={sortMode}
@@ -884,7 +884,7 @@ export default function Findings() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>From Date</label>
                   <input
                     type="date"
@@ -894,7 +894,7 @@ export default function Findings() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <label className={filterLabelClass}>To Date</label>
                   <input
                     type="date"
@@ -905,7 +905,7 @@ export default function Findings() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end border-t border-silver-bright/10 pt-4">
                 <label className="inline-flex h-11 items-center gap-3 border border-silver-bright/10 bg-charcoal-dark px-4 text-[10px] font-black uppercase tracking-[0.18em] text-silver/75">
                   <input
                     type="checkbox"
