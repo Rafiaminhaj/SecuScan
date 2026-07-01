@@ -1564,11 +1564,36 @@ async def list_target_policies(owner: str = Depends(get_current_owner)):
     return {"items": deserialize_resource_rows(rows), "total": len(rows)}
 
 
+def _validate_lengths(
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    notes: Optional[str] = None,
+    resource_type: str = "Resource",
+):
+    if name is not None and len(str(name).strip()) > 255:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{resource_type} name exceeds maximum length of 255 characters",
+        )
+    if description is not None and len(str(description).strip()) > 2000:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{resource_type} description exceeds maximum length of 2000 characters",
+        )
+    if notes is not None and len(str(notes).strip()) > 2000:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{resource_type} notes exceeds maximum length of 2000 characters",
+        )
+
+
 @router.post("/target-policies", dependencies=[Depends(admin_limiter)])
 async def create_target_policy(payload: Dict[str, Any], owner: str = Depends(get_current_owner)):
     name = str(payload.get("name", "")).strip()
     if not name:
         raise HTTPException(status_code=400, detail="Target policy name is required")
+    description = str(payload.get("description", "")).strip()
+    _validate_lengths(name=name, description=description, resource_type="Target policy")
 
     allowed = payload.get("allowed_targets")
     if allowed is not None and not isinstance(allowed, list):
@@ -1588,7 +1613,7 @@ async def create_target_policy(payload: Dict[str, Any], owner: str = Depends(get
             policy_id,
             owner,
             name,
-            str(payload.get("description", "")).strip() or None,
+            description or None,
             1 if payload.get("allow_public_targets") else 0,
             1 if payload.get("allow_exploit_validation") else 0,
             1 if payload.get("allow_authenticated_scan") else 0,
@@ -1607,6 +1632,14 @@ async def update_target_policy(policy_id: str, payload: Dict[str, Any], owner: s
     row = await db.fetchone("SELECT id FROM target_policies WHERE id = ? AND owner_id = ?", (policy_id, owner))
     if not row:
         raise HTTPException(status_code=404, detail="Target policy not found")
+
+    if "name" in payload or "description" in payload:
+        _validate_lengths(
+            name=payload.get("name"),
+            description=payload.get("description"),
+            resource_type="Target policy",
+        )
+
     updates: List[str] = []
     params: List[Any] = []
     for key in ("name", "description", "default_validation_mode"):
@@ -1652,6 +1685,8 @@ async def create_credential_profile(payload: Dict[str, Any], owner: str = Depend
     name = str(payload.get("name", "")).strip()
     if not name:
         raise HTTPException(status_code=400, detail="Credential profile name is required")
+    _validate_lengths(name=name, resource_type="Credential profile")
+
     profile_id = str(uuid.uuid4())
     db = await get_db()
     await db.execute(
@@ -1681,6 +1716,10 @@ async def update_credential_profile(profile_id: str, payload: Dict[str, Any], ow
     row = await db.fetchone("SELECT id FROM credential_profiles WHERE id = ? AND owner_id = ?", (profile_id, owner))
     if not row:
         raise HTTPException(status_code=404, detail="Credential profile not found")
+
+    if "name" in payload:
+        _validate_lengths(name=payload.get("name"), resource_type="Credential profile")
+
     updates: List[str] = []
     params: List[Any] = []
     for key in ("name", "username_secret_name", "password_secret_name"):
@@ -1722,6 +1761,9 @@ async def create_session_profile(payload: Dict[str, Any], owner: str = Depends(g
     name = str(payload.get("name", "")).strip()
     if not name:
         raise HTTPException(status_code=400, detail="Session profile name is required")
+    notes = str(payload.get("notes", "")).strip()
+    _validate_lengths(name=name, notes=notes, resource_type="Session profile")
+
     profile_id = str(uuid.uuid4())
     db = await get_db()
     await db.execute(
@@ -1736,7 +1778,7 @@ async def create_session_profile(payload: Dict[str, Any], owner: str = Depends(g
             name,
             payload.get("cookie_secret_name"),
             _json_payload(payload.get("extra_headers"), "{}"),
-            str(payload.get("notes", "")).strip() or None,
+            notes or None,
         ),
     )
     row = await db.fetchone("SELECT * FROM session_profiles WHERE id = ?", (profile_id,))
@@ -1749,6 +1791,14 @@ async def update_session_profile(profile_id: str, payload: Dict[str, Any], owner
     row = await db.fetchone("SELECT id FROM session_profiles WHERE id = ? AND owner_id = ?", (profile_id, owner))
     if not row:
         raise HTTPException(status_code=404, detail="Session profile not found")
+
+    if "name" in payload or "notes" in payload:
+        _validate_lengths(
+            name=payload.get("name"),
+            notes=payload.get("notes"),
+            resource_type="Session profile",
+        )
+
     updates: List[str] = []
     params: List[Any] = []
     for key in ("name", "cookie_secret_name", "notes"):
@@ -1813,6 +1863,7 @@ async def create_workflow(payload: Dict[str, Any], owner: str = Depends(get_curr
     name = str(payload.get("name", "")).strip()
     if not name:
         raise HTTPException(status_code=400, detail="Workflow name is required")
+    _validate_lengths(name=name, resource_type="Workflow")
 
     steps = _parse_workflow_steps(payload.get("steps", []))
     if not steps:
@@ -1996,6 +2047,9 @@ async def rollback_workflow(workflow_id: str, version_number: int, owner: str = 
 async def update_workflow(workflow_id: str, payload: Dict[str, Any], owner: str = Depends(get_current_owner)):
     db = await get_db()
     row = await _verify_workflow_owner(db, workflow_id, owner)
+
+    if "name" in payload:
+        _validate_lengths(name=payload.get("name"), resource_type="Workflow")
 
     old_enabled = bool(row["enabled"])
     new_enabled = old_enabled
